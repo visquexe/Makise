@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Makise</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg-2: #161923;
+    --bubble-user: #6c5ce7;
+    --bubble-model: #1f2330;
+    --text: #eef0f6;
+    --text-dim: #9aa0b4;
+    --accent: #6c5ce7;
+    --danger: #e05260;
+    --border: #262b3a;
+  }
+  [data-theme="light"] {
+    --bg: #f4f5f8;
+    --bg-2: #ffffff;
+    --bubble-user: #6c5ce7;
+    --bubble-model: #eceef4;
+    --text: #1b1d24;
+    --text-dim: #6b7080;
+    --accent: #6c5ce7;
+    --danger: #d1354a;
+    --border: #e2e4ec;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 720px;
+    margin: 0 auto;
+    background: var(--bg);
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: env(safe-area-inset-top, 12px) 14px 12px 14px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  header .title {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+  }
+
+  header .title strong {
+    font-size: 17px;
+    letter-spacing: 0.2px;
+  }
+
+  header .title span {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  header .actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  header button {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 7px 10px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  header button:active { opacity: 0.6; }
+
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 12px 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .msg {
+    max-width: 82%;
+    padding: 10px 13px;
+    border-radius: 16px;
+    font-size: 15px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    animation: pop 0.15s ease-out;
+  }
+
+  @keyframes pop {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg.user {
+    align-self: flex-end;
+    background: var(--bubble-user);
+    color: #fff;
+    border-bottom-right-radius: 5px;
+  }
+
+  .msg.model {
+    align-self: flex-start;
+    background: var(--bubble-model);
+    color: var(--text);
+    border-bottom-left-radius: 5px;
+  }
+
+  .msg.error {
+    align-self: center;
+    background: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    font-size: 13px;
+  }
+
+  .typing {
+    align-self: flex-start;
+    background: var(--bubble-model);
+    padding: 12px 16px;
+    border-radius: 16px;
+    border-bottom-left-radius: 5px;
+    display: flex;
+    gap: 4px;
+  }
+
+  .typing span {
+    width: 6px;
+    height: 6px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+
+  .typing span:nth-child(2) { animation-delay: 0.15s; }
+  .typing span:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  #inputBar {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)) 10px;
+    background: var(--bg-2);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  #textInput {
+    flex: 1;
+    resize: none;
+    max-height: 110px;
+    padding: 10px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+  }
+
+  #sendBtn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  #sendBtn:disabled {
+    opacity: 0.5;
+  }
+
+  #sendBtn:active:not(:disabled) { opacity: 0.7; }
+</style>
+</head>
+<body data-theme="dark">
+<div id="app">
+
+  <header>
+    <div class="title">
+      <strong>Makise</strong>
+      <span>your personal AI assistant</span>
+    </div>
+    <div class="actions">
+      <button id="themeBtn" title="Toggle theme">🌙</button>
+      <button id="clearBtn" title="Clear conversation">🗑️</button>
+      <button id="newChatBtn" title="New chat">＋</button>
+    </div>
+  </header>
+
+  <div id="messages"></div>
+
+  <div id="inputBar">
+    <textarea id="textInput" rows="1" placeholder="Message Makise..."></textarea>
+    <button id="sendBtn">➤</button>
+  </div>
+
+</div>
+
+<script>
+  // ====== CONFIGURATION ======
+  // Paste your existing working Gemini API key here (the same one your old chatbot used).
+  const GEMINI_API_KEY = "YOUR_API_KEY_HERE";
+
+  // This should match the model you were already using.
+  const GEMINI_MODEL = "gemini-3.6-flash";
+
+  const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/" +
+                   GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEY;
+
+  const SYSTEM_PROMPT =
+    "You are Makise, a personal AI assistant. Your personality is friendly, intelligent, " +
+    "slightly playful, and warm, but never overly formal or robotic. You speak naturally, " +
+    "like a clever friend who happens to know a lot. You're genuinely helpful and give " +
+    "clear, useful answers, but you don't sound like a corporate script. Light humor is " +
+    "welcome when it fits, but you take the user's actual needs seriously.";
+
+  // ====== STORAGE ======
+  const STORAGE_KEY = "makise_conversation_v1";
+  const THEME_KEY = "makise_theme";
+
+  let messages = []; // { role: "user" | "model", text: string }
+
+  function loadConversation() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      messages = saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      messages = [];
+    }
+  }
+
+  function saveConversation() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch (e) {
+      // storage full or unavailable; conversation just won't persist this time
+    }
+  }
+
+  // ====== DOM ======
+  const messagesEl = document.getElementById("messages");
+  const inputEl = document.getElementById("textInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const newChatBtn = document.getElementById("newChatBtn");
+  const themeBtn = document.getElementById("themeBtn");
+
+  function scrollToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function renderMessages() {
+    messagesEl.innerHTML = "";
+    if (messages.length === 0) {
+      const welcome = document.createElement("div");
+      welcome.className = "msg model";
+      welcome.textContent = "Hey, I'm Makise! What's on your mind today?";
+      messagesEl.appendChild(welcome);
+    } else {
+      messages.forEach(m => {
+        const bubble = document.createElement("div");
+        bubble.className = "msg " + (m.role === "user" ? "user" : "model");
+        bubble.textContent = m.text;
+        messagesEl.appendChild(bubble);
+      });
+    }
+    scrollToBottom();
+  }
+
+  function showTyping() {
+    const typing = document.createElement("div");
+    typing.className = "typing";
+    typing.id = "typingIndicator";
+    typing.innerHTML = "<span></span><span></span><span></span>";
+    messagesEl.appendChild(typing);
+    scrollToBottom();
+  }
+
+  function hideTyping() {
+    const t = document.getElementById("typingIndicator");
+    if (t) t.remove();
+  }
+
+  function showError(text) {
+    const bubble = document.createElement("div");
+    bubble.className = "msg error";
+    bubble.textContent = text;
+    messagesEl.appendChild(bubble);
+    scrollToBottom();
+  }
+
+  function setSending(isSending) {
+    inputEl.disabled = isSending;
+    sendBtn.disabled = isSending;
+  }
+
+  // ====== API CALL ======
+  async function callGemini() {
+    const contents = messages.map(m => ({
+      role: m.role,
+      parts: [{ text: m.text }]
+    }));
+
+    const body = {
+      contents: contents,
+      systemInstruction: {
+        parts: [{ text: SYSTEM_PROMPT }]
+      }
+    };
+
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const message = (data && data.error && data.error.message) || "Request failed.";
+      throw new Error(message);
+    }
+
+    const reply =
+      data &&
+      data.candidates &&
+      data.candidates[0] &&
+      data.candidates[0].content &&
+      data.candidates[0].content.parts &&
+      data.candidates[0].content.parts[0] &&
+      data.candidates[0].content.parts[0].text;
+
+    if (!reply) {
+      throw new Error("Makise didn't return a response. Try again.");
+    }
+
+    return reply;
+  }
+
+  async function sendMessage() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    messages.push({ role: "user", text: text });
+    saveConversation();
+    renderMessages();
+
+    inputEl.value = "";
+    autoResize();
+    setSending(true);
+    showTyping();
+
+    try {
+      const reply = await callGemini();
+      hideTyping();
+      messages.push({ role: "model", text: reply });
+      saveConversation();
+      renderMessages();
+    } catch (err) {
+      hideTyping();
+      showError("⚠️ " + (err.message || "Something went wrong. Check your connection and API key."));
+    } finally {
+      setSending(false);
+      inputEl.focus();
+    }
+  }
+
+  // ====== INPUT HANDLING ======
+  function autoResize() {
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 110) + "px";
+  }
+
+  inputEl.addEventListener("input", autoResize);
+
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  sendBtn.addEventListener("click", sendMessage);
+
+  // ====== CONVERSATION MANAGEMENT ======
+  function startNewConversation() {
+    messages = [];
+    saveConversation();
+    renderMessages();
+  }
+
+  clearBtn.addEventListener("click", () => {
+    if (confirm("Clear this conversation? This can't be undone.")) {
+      startNewConversation();
+    }
+  });
+
+  newChatBtn.addEventListener("click", () => {
+    if (messages.length === 0) return;
+    if (confirm("Start a new chat? Your current conversation will be cleared.")) {
+      startNewConversation();
+    }
+  });
+
+  // ====== THEME ======
+  function applyTheme(theme) {
+    document.body.setAttribute("data-theme", theme);
+    themeBtn.textContent = theme === "dark" ? "🌙" : "☀️";
+    localStorage.setItem(THEME_KEY, theme);
+  }
+
+  themeBtn.addEventListener("click", () => {
+    const current = document.body.getAttribute("data-theme");
+    applyTheme(current === "dark" ? "light" : "dark");
+  });
+
+  // ====== INIT ======
+  (function init() {
+    const savedTheme = localStorage.getItem(THEME_KEY) || "dark";
+    applyTheme(savedTheme);
+    loadConversation();
+    renderMessages();
+  })();
+</script>
+</body>
+</html>
